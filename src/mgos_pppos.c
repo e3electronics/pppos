@@ -735,7 +735,7 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
 
       pd->deadline =
           now + (cur_cmd->timeout > 0 ? cur_cmd->timeout : AT_CMD_TIMEOUT);
-      LOG(LL_INFO, ("Command timed : %f", pd->deadline));
+      LOG(LL_INFO, ("Command timed : %f",cur_cmd->timeout ));
 
       pd->delay = 0;
       mbuf_clear(&pd->data);
