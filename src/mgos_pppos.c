@@ -39,7 +39,7 @@
 #include "mgos_uart.h"
 #include "mgos_utils.h"
 
-#define AT_CMD_TIMEOUT 2.0
+#define AT_CMD_TIMEOUT 20.0
 #define COPS_TIMEOUT 60
 #define COPS_AUTO_TIMEOUT 600
 
