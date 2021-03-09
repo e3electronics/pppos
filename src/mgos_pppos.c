@@ -728,8 +728,11 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
       struct mgos_pppos_cmd *cur_cmd = &pd->cmds[pd->cmd_idx];
       if (now < pd->delay) break;
       mgos_pppos_at_cmd(uart_no, cur_cmd->cmd);
+      
       pd->deadline =
           now + (cur_cmd->timeout > 0 ? cur_cmd->timeout : AT_CMD_TIMEOUT);
+LOG(LL_INFO, ("Command timed : %d", pd->deadline));
+
       pd->delay = 0;
       mbuf_clear(&pd->data);
       mgos_pppos_set_state(pd, PPPOS_CMD_RESP);
