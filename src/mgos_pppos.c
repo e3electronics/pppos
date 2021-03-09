@@ -374,7 +374,8 @@ static bool mgos_pppos_creg_cb(void *cb_arg, bool ok, struct mg_str data) {
   sprintf(reg_read_fmt, "+%s: %%d,%%d", reg_cmd);
   int n, st;
   if (sscanf(data.p, reg_read_fmt, &n, &st) != 2) {
-    LOG(LL_WARN, ("%s response to AT+%s, proceeding anyway", "Unknown", reg_cmd));
+    LOG(LL_WARN,
+        ("%s response to AT+%s, proceeding anyway", "Unknown", reg_cmd));
     return true;
   }
   ok = false;
@@ -408,7 +409,8 @@ static bool mgos_pppos_creg_cb(void *cb_arg, bool ok, struct mg_str data) {
     LOG(LL_ERROR, ("Connected to mobile network (%s)", sts));
   } else {
     int timeout = (pd->cops_set ? COPS_TIMEOUT : COPS_AUTO_TIMEOUT);
-    LOG(LL_ERROR, ("Not connected to mobile network, status %d (%s) %d", st, sts, timeout));
+    LOG(LL_ERROR, ("Not connected to mobile network, status %d (%s) %d", st,
+                   sts, timeout));
     if (pd->creg_start == 0) {
       pd->creg_start = mgos_uptime();
     }
@@ -427,7 +429,8 @@ static bool mgos_pppos_creg_cb(void *cb_arg, bool ok, struct mg_str data) {
 static bool mgos_pppos_cops_set_cb(void *cb_arg, bool ok, struct mg_str data) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) cb_arg;
   if (!ok) {
-    LOG(LL_ERROR, ("Error setting network operator: %.*s", (int) data.len, data.p));
+    LOG(LL_ERROR,
+        ("Error setting network operator: %.*s", (int) data.len, data.p));
   }
   pd->try_cops = false;
   pd->cops_set = ok;
@@ -693,7 +696,8 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
       add_cmd(pd, mgos_pppos_cimi_cb, 0, "AT+CIMI");
       add_cmd(pd, mgos_pppos_ccid_cb, 0, "AT+CCID");
       add_cmd(pd, mgos_pppos_cpin_cb, 0, "AT+CPIN?");
-      add_cmd(pd, NULL, 0, "AT+%s=0", reg_cmd); /* Disable unsolicited reports */
+      add_cmd(pd, NULL, 0, "AT+%s=0",
+              reg_cmd); /* Disable unsolicited reports */
       bool ok = false;
       if (pd->cfg->last_oper != NULL && pd->try_cops) {
         /* Try last used first, fall back to auto if unsuccessful. */
@@ -728,10 +732,10 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
       struct mgos_pppos_cmd *cur_cmd = &pd->cmds[pd->cmd_idx];
       if (now < pd->delay) break;
       mgos_pppos_at_cmd(uart_no, cur_cmd->cmd);
-      
+
       pd->deadline =
           now + (cur_cmd->timeout > 0 ? cur_cmd->timeout : AT_CMD_TIMEOUT);
-LOG(LL_INFO, ("Command timed : %d", pd->deadline));
+      LOG(LL_INFO, ("Command timed : %f", pd->deadline));
 
       pd->delay = 0;
       mbuf_clear(&pd->data);
