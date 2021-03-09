@@ -39,7 +39,7 @@
 #include "mgos_uart.h"
 #include "mgos_utils.h"
 
-#define AT_CMD_TIMEOUT 2.0
+#define AT_CMD_TIMEOUT 10.0
 #define COPS_TIMEOUT 60
 #define COPS_AUTO_TIMEOUT 600
 
@@ -667,7 +667,7 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
       LOG(LL_INFO, ("Connecting (UART%d, APN '%s')...", pd->cfg->uart_no,
                     (apn ? apn : "")));
       mbuf_remove(&pd->data, pd->data.len);
-      add_cmd(pd, mgos_pppos_at_cb, 0, "AT");
+      add_cmd(pd, NULL, 0, "AT");
       add_cmd(pd, NULL, 0, "ATH");
       add_cmd(pd, NULL, 0, "ATE0");
       add_cmd(pd, NULL, 0, "AT+CFUN=0"); /* Offline */
