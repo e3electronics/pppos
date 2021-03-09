@@ -753,6 +753,7 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
         pd->deadline = 0;
         break;
       }
+      
       bool cmd_done = false, cmd_res = false;
       /* Consume data line by line */
       struct mg_str s = mg_mk_str_n(pd->data.buf, pd->data.len);
