@@ -39,7 +39,7 @@
 #include "mgos_uart.h"
 #include "mgos_utils.h"
 
-#define AT_CMD_TIMEOUT 20.0
+#define AT_CMD_TIMEOUT 2.0
 #define COPS_TIMEOUT 60
 #define COPS_AUTO_TIMEOUT 600
 
@@ -673,7 +673,7 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
       add_cmd(pd, mgos_pppos_at_cb, 0, "AT");
       add_cmd(pd, NULL, 0, "ATH");
       add_cmd(pd, NULL, 0, "ATE0");
-      add_cmd(pd, NULL, 0, "AT+CFUN=0"); /* Offline */
+      add_cmd(pd, NULL, 20.0, "AT+CFUN=0"); /* Offline */
       if (!pd->baud_ok) {
         struct mgos_uart_config ucfg;
         bool need_ifr = true, need_ifc = true;
@@ -690,7 +690,7 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
           add_cmd(pd, mgos_pppos_ifc_cb, 0, "AT+IFC=%d,%d", ifc, ifc);
         }
       }
-      add_cmd(pd, NULL, 0, "AT+CFUN=1"); /* Full functionality */
+      add_cmd(pd, NULL, 20.0, "AT+CFUN=1"); /* Full functionality */
       add_cmd(pd, mgos_pppos_ati_cb, 0, "ATI");
       add_cmd(pd, mgos_pppos_gsn_cb, 0, "AT+GSN");
       add_cmd(pd, mgos_pppos_cimi_cb, 0, "AT+CIMI");
