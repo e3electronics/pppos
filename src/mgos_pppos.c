@@ -699,17 +699,17 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
       add_cmd(pd, NULL, 0, "AT+%s=0",
               reg_cmd); /* Disable unsolicited reports */
       bool ok = false;
-      // if (pd->cfg->last_oper != NULL && pd->try_cops) {
-      //   /* Try last used first, fall back to auto if unsuccessful. */
-      //   LOG(LL_INFO, ("Trying to connect to %s", pd->cfg->last_oper));
-      //   const char *comma = strchr(pd->cfg->last_oper, ',');
-      //   if (comma != NULL) {
-      //     add_cmd(pd, mgos_pppos_cops_set_cb, COPS_TIMEOUT,
-      //             "AT+COPS=4,2,\"%.*s\"", (int) (comma - pd->cfg->last_oper),
-      //             pd->cfg->last_oper);
-      //     ok = true;
-      //   }
-      // }
+      if (pd->cfg->last_oper != NULL && pd->try_cops) {
+        /* Try last used first, fall back to auto if unsuccessful. */
+        LOG(LL_INFO, ("Trying to connect to %s", pd->cfg->last_oper));
+        const char *comma = strchr(pd->cfg->last_oper, ',');
+        if (comma != NULL) {
+          add_cmd(pd, mgos_pppos_cops_set_cb, COPS_TIMEOUT,
+                  "AT+COPS=4,2,\"%.*s\"", (int) (comma - pd->cfg->last_oper),
+                  pd->cfg->last_oper);
+          ok = true;
+        }
+      }
       if (!ok) {
         /* Auto mode */
         LOG(LL_INFO, ("Automatic operator selection"));
