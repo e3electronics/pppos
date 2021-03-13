@@ -14,22 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "mgos_pppos.h"
-
 #include "common/cs_dbg.h"
 #include "common/mbuf.h"
 #include "common/queue.h"
-
 #include "lwip/ip_addr.h"
 #include "lwip/netif.h"
 #include "lwip/tcpip.h"
 #include "netif/ppp/ppp.h"
 #include "netif/ppp/pppapi.h"
 #include "netif/ppp/pppos.h"
-
 #include "mongoose.h"
-
 #include "mgos_gpio.h"
 #include "mgos_net_hal.h"
 #include "mgos_sys_config.h"
@@ -38,11 +33,9 @@
 #include "mgos_timers.h"
 #include "mgos_uart.h"
 #include "mgos_utils.h"
-
 #define AT_CMD_TIMEOUT 2.0
 #define COPS_TIMEOUT 60
 #define COPS_AUTO_TIMEOUT 600
-
 enum mgos_pppos_state {
   PPPOS_IDLE = 0,
   PPPOS_INIT = 1,
@@ -58,9 +51,7 @@ enum mgos_pppos_state {
   PPPOS_START_PPP = 10,
   PPPOS_RUN = 11,
 };
-
 struct mgos_pppos_cmd;
-
 struct mgos_pppos_data {
   int if_instance;
   const struct mgos_config_pppos *cfg;
@@ -72,30 +63,24 @@ struct mgos_pppos_data {
   bool try_cops, cops_set;
   double creg_start;
   mgos_timer_id poll_timer_id;
-
   struct mgos_pppos_cmd *cmds;
   int num_cmds;
   int cmd_idx;
   int try_baud_idx;
   int try_baud_fc;
   enum mgos_pppos_state cmd_success_state, cmd_error_state;
-
   struct netif pppif;
   ppp_pcb *pppcb;
   enum mgos_net_event net_status;
   enum mgos_net_event net_status_last_reported;
   struct mg_str ati_resp, imei, imsi, iccid, oper;
-
   SLIST_ENTRY(mgos_pppos_data) next;
 };
-
 static SLIST_HEAD(s_pds, mgos_pppos_data) s_pds = SLIST_HEAD_INITIALIZER(s_pds);
-
 /* If we fail to communicate with the modem at the specified rate,
  * we will try these (with no flow control), in this order. */
 static const int s_baud_rates[] = {0 /* first we try the configured rate */,
                                    115200, 230400, 460800, 921600};
-
 static void mgos_pppos_try_baud_rate(struct mgos_pppos_data *pd) {
   struct mgos_uart_config ucfg;
   if (!mgos_uart_config_get(pd->cfg->uart_no, &ucfg)) return;
@@ -122,7 +107,6 @@ static void mgos_pppos_try_baud_rate(struct mgos_pppos_data *pd) {
     pd->try_baud_fc ^= 1;
   }
 }
-
 static void mgos_pppos_at_cmd(int uart_no, const char *cmd) {
   LOG(LL_DEBUG, (">> %s", cmd));
   mgos_uart_write(uart_no, cmd, strlen(cmd));
@@ -130,14 +114,12 @@ static void mgos_pppos_at_cmd(int uart_no, const char *cmd) {
     mgos_uart_write(uart_no, "\r\n", 2);
   }
 }
-
 static void mgos_pppos_set_state(struct mgos_pppos_data *pd,
                                  enum mgos_pppos_state state) {
   LOG(LL_DEBUG,
       ("%d -> %d %lf %lf", pd->state, state, mgos_uptime(), pd->deadline));
   pd->state = state;
 }
-
 static void mgos_pppos_net_status_cb(void *arg) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) arg;
   mgos_net_dev_event_cb(MGOS_NET_IF_TYPE_PPP, 0, pd->net_status);
@@ -152,7 +134,6 @@ static void mgos_pppos_net_status_cb(void *arg) {
     pd->try_cops = true;
   }
 }
-
 static void mgos_pppos_set_net_status(struct mgos_pppos_data *pd,
                                       enum mgos_net_event status) {
   pd->net_status = status;
@@ -161,7 +142,6 @@ static void mgos_pppos_set_net_status(struct mgos_pppos_data *pd,
     mgos_invoke_cb(mgos_pppos_net_status_cb, pd, false /* from_isr */);
   }
 }
-
 static u32_t mgos_pppos_send_cb(ppp_pcb *pcb, u8_t *data, u32_t len,
                                 void *ctx) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) ctx;
@@ -185,7 +165,6 @@ static u32_t mgos_pppos_send_cb(ppp_pcb *pcb, u8_t *data, u32_t len,
   (void) pcb;
   return len;
 }
-
 /* Note: run on the lwip's tcpip thread. */
 static void mgos_pppos_status_cb(ppp_pcb *pcb, int err_code, void *arg) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) arg;
@@ -211,7 +190,6 @@ static void mgos_pppos_status_cb(ppp_pcb *pcb, int err_code, void *arg) {
     }
   }
 }
-
 static void free_cmds(struct mgos_pppos_data *pd, bool ok) {
   struct mgos_pppos_cmd *cmds = pd->cmds;
   int num_cmds = pd->num_cmds;
@@ -229,7 +207,6 @@ static void free_cmds(struct mgos_pppos_data *pd, bool ok) {
   }
   free(cmds);
 }
-
 static void add_cmd2(struct mgos_pppos_data *pd, char *cs,
                      mgos_pppos_cmd_cb_t cb, void *cb_arg, float timeout) {
   struct mgos_pppos_cmd *cmd = NULL;
@@ -242,7 +219,6 @@ static void add_cmd2(struct mgos_pppos_data *pd, char *cs,
   cmd->timeout = timeout;
   pd->num_cmds++;
 }
-
 static void add_cmd(struct mgos_pppos_data *pd, mgos_pppos_cmd_cb_t cb,
                     float timeout, const char *fmt, ...) {
   va_list ap;
@@ -252,7 +228,6 @@ static void add_cmd(struct mgos_pppos_data *pd, mgos_pppos_cmd_cb_t cb,
   va_end(ap);
   add_cmd2(pd, cmd, cb, pd, timeout);
 }
-
 static bool mgos_pppos_at_cb(void *cb_arg, bool ok, struct mg_str data) {
   /* Some modems (Sequans) don't like +++ when there's no data session
    * and send "ERROR". Ignore it. */
@@ -261,7 +236,6 @@ static bool mgos_pppos_at_cb(void *cb_arg, bool ok, struct mg_str data) {
   (void) data;
   return true;
 }
-
 static bool mgos_pppos_ati_cb(void *cb_arg, bool ok, struct mg_str data) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) cb_arg;
   if (ok) {
@@ -270,7 +244,6 @@ static bool mgos_pppos_ati_cb(void *cb_arg, bool ok, struct mg_str data) {
   pd->baud_ok = false;
   return ok;
 }
-
 static bool mgos_pppos_gsn_cb(void *cb_arg, bool ok, struct mg_str data) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) cb_arg;
   if (ok) {
@@ -280,7 +253,6 @@ static bool mgos_pppos_gsn_cb(void *cb_arg, bool ok, struct mg_str data) {
   }
   return true;
 }
-
 static bool mgos_pppos_ifr_cb(void *cb_arg, bool ok, struct mg_str data) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) cb_arg;
   int uart_no = pd->cfg->uart_no;
@@ -298,7 +270,6 @@ static bool mgos_pppos_ifr_cb(void *cb_arg, bool ok, struct mg_str data) {
   (void) data;
   return ok;
 }
-
 static bool mgos_pppos_ifc_cb(void *cb_arg, bool ok, struct mg_str data) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) cb_arg;
   int uart_no = pd->cfg->uart_no;
@@ -313,13 +284,11 @@ static bool mgos_pppos_ifc_cb(void *cb_arg, bool ok, struct mg_str data) {
   (void) data;
   return ok;
 }
-
 static bool mgos_pppos_cimi_cb(void *cb_arg, bool ok, struct mg_str data) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) cb_arg;
   if (ok) pd->imsi = mg_strdup(mg_strstrip(data));
   return true;
 }
-
 static bool mgos_pppos_ccid_cb(void *cb_arg, bool ok, struct mg_str data) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) cb_arg;
   if (ok) {
@@ -331,7 +300,6 @@ static bool mgos_pppos_ccid_cb(void *cb_arg, bool ok, struct mg_str data) {
   }
   return true;
 }
-
 static bool mgos_pppos_cpin_cb(void *cb_arg, bool ok, struct mg_str data) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) cb_arg;
   if (!ok) {
@@ -362,7 +330,6 @@ static bool mgos_pppos_cpin_cb(void *cb_arg, bool ok, struct mg_str data) {
   mgos_event_trigger(MGOS_PPPOS_INFO, &arg);
   return true;
 }
-
 static bool mgos_pppos_creg_cb(void *cb_arg, bool ok, struct mg_str data) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) cb_arg;
   const char *reg_cmd = mgos_sys_config_get_pppos_reg_cmd();
@@ -425,7 +392,6 @@ static bool mgos_pppos_creg_cb(void *cb_arg, bool ok, struct mg_str data) {
   (void) sts;
   return ok;
 }
-
 static bool mgos_pppos_cops_set_cb(void *cb_arg, bool ok, struct mg_str data) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) cb_arg;
   if (!ok) {
@@ -437,7 +403,6 @@ static bool mgos_pppos_cops_set_cb(void *cb_arg, bool ok, struct mg_str data) {
   (void) data;
   return ok;
 }
-
 static bool mgos_pppos_cops_cb(void *cb_arg, bool ok, struct mg_str data) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) cb_arg;
   if (!ok) return true;
@@ -462,7 +427,6 @@ static bool mgos_pppos_cops_cb(void *cb_arg, bool ok, struct mg_str data) {
   LOG(LL_INFO, ("Operator: %.*s", (int) pd->oper.len, pd->oper.p));
   return true;
 }
-
 static bool mgos_pppos_csq_cb(void *cb_arg, bool ok, struct mg_str data) {
   if (!ok) return true;
   int sq, ber;
@@ -472,20 +436,27 @@ static bool mgos_pppos_csq_cb(void *cb_arg, bool ok, struct mg_str data) {
   (void) cb_arg;
   return true;
 }
-
 static bool mgos_pppos_atd_cb(void *cb_arg, bool ok, struct mg_str data) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) cb_arg;
   if (ok) pd->cmd_mode = false;
   (void) data;
   return ok;
 }
-
+/**
+ * Artemio: para seguimiento y control de CFUN
+ */
+static bool mgos_pppos_cfun_cb(void *cb_arg, bool ok, struct mg_str data) {
+  struct mgos_pppos_cmd *cur_cmd = &pd->cmds[pd->cmd_idx];
+  if (!ok) {
+    LOG(LL_INFO, ("%s Error: %s", cur_cmd->cmd, data.p));
+  }
+  return ok;
+}
 struct ppp_set_auth_arg {
   u8_t authtype;
   const char *user;
   const char *passwd;
 };
-
 static err_t pppapi_do_ppp_set_auth(struct tcpip_api_call_data *m) {
   struct pppapi_msg *msg = (struct pppapi_msg *) m;
   struct ppp_set_auth_arg *aa =
@@ -493,7 +464,6 @@ static err_t pppapi_do_ppp_set_auth(struct tcpip_api_call_data *m) {
   ppp_set_auth(msg->msg.ppp, aa->authtype, aa->user, aa->passwd);
   return ERR_OK;
 }
-
 static void pppos_set_auth(ppp_pcb *pcb, u8_t authtype, const char *user,
                            const char *passwd) {
   struct ppp_set_auth_arg auth_arg = {
@@ -507,10 +477,8 @@ static void pppos_set_auth(ppp_pcb *pcb, u8_t authtype, const char *user,
   };
   tcpip_api_call(pppapi_do_ppp_set_auth, &msg.call);
 }
-
 static void mgos_pppos_poll_timer_cb(void *arg);
 static void mgos_pppos_uart_dispatcher(int uart_no, void *arg);
-
 static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
   int uart_no = pd->cfg->uart_no;
   switch (pd->state) {
@@ -673,7 +641,7 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
       add_cmd(pd, mgos_pppos_at_cb, 5.0, "AT");
       add_cmd(pd, NULL, 0, "ATH");
       add_cmd(pd, NULL, 0, "ATE0");
-      add_cmd(pd, NULL, 20.0, "AT+CFUN=0"); /* Offline */
+      add_cmd(pd, mgos_pppos_cfun_cb, 20.0, "AT+CFUN=0"); /* Offline */
       if (!pd->baud_ok) {
         struct mgos_uart_config ucfg;
         bool need_ifr = true, need_ifc = true;
@@ -690,7 +658,7 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
           add_cmd(pd, mgos_pppos_ifc_cb, 0, "AT+IFC=%d,%d", ifc, ifc);
         }
       }
-      add_cmd(pd, NULL, 20.0, "AT+CFUN=1"); /* Full functionality */
+      add_cmd(pd, mgos_pppos_cfun_cb, 20.0, "AT+CFUN=1"); /* Full functionality */
       add_cmd(pd, mgos_pppos_ati_cb, 0, "ATI");
       add_cmd(pd, mgos_pppos_gsn_cb, 0, "AT+GSN");
       add_cmd(pd, mgos_pppos_cimi_cb, 0, "AT+CIMI");
@@ -870,18 +838,15 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
     }
   }
 }
-
 static void mgos_pppos_dispatch(struct mgos_pppos_data *pd) {
   do {
     mgos_pppos_dispatch_once(pd);
   } while (pd->state == PPPOS_INIT && pd->deadline == 0);
 }
-
 static void mgos_pppos_poll_timer_cb(void *arg) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) arg;
   mgos_pppos_dispatch(pd);
 }
-
 static void mgos_pppos_uart_dispatcher(int uart_no, void *arg) {
   struct mgos_pppos_data *pd = (struct mgos_pppos_data *) arg;
   size_t rx_av = mgos_uart_read_avail(uart_no);
@@ -901,7 +866,6 @@ static void mgos_pppos_uart_dispatcher(int uart_no, void *arg) {
   }
   mgos_pppos_dispatch(pd);
 }
-
 bool mgos_pppos_dev_get_ip_info(int if_instance,
                                 struct mgos_net_ip_info *ip_info) {
   memset(ip_info, 0, sizeof(*ip_info));
@@ -919,7 +883,6 @@ bool mgos_pppos_dev_get_ip_info(int if_instance,
   }
   return false;
 }
-
 bool mgos_pppos_connect(int if_instance) {
   struct mgos_pppos_data *pd;
   SLIST_FOREACH(pd, &s_pds, next) {
@@ -931,7 +894,6 @@ bool mgos_pppos_connect(int if_instance) {
   }
   return false;
 }
-
 bool mgos_pppos_disconnect(int if_instance) {
   struct mgos_pppos_data *pd;
   SLIST_FOREACH(pd, &s_pds, next) {
@@ -955,7 +917,6 @@ bool mgos_pppos_disconnect(int if_instance) {
   }
   return false;
 }
-
 struct mg_str mgos_pppos_get_imei(int if_instance) {
   struct mgos_pppos_data *pd;
   SLIST_FOREACH(pd, &s_pds, next) {
@@ -963,7 +924,6 @@ struct mg_str mgos_pppos_get_imei(int if_instance) {
   }
   return mg_mk_str_n(NULL, 0);
 }
-
 struct mg_str mgos_pppos_get_imsi(int if_instance) {
   struct mgos_pppos_data *pd;
   SLIST_FOREACH(pd, &s_pds, next) {
@@ -971,7 +931,6 @@ struct mg_str mgos_pppos_get_imsi(int if_instance) {
   }
   return mg_mk_str_n(NULL, 0);
 }
-
 struct mg_str mgos_pppos_get_iccid(int if_instance) {
   struct mgos_pppos_data *pd;
   SLIST_FOREACH(pd, &s_pds, next) {
@@ -979,7 +938,6 @@ struct mg_str mgos_pppos_get_iccid(int if_instance) {
   }
   return mg_mk_str_n(NULL, 0);
 }
-
 bool mgos_pppos_run_cmds(int if_instance, const struct mgos_pppos_cmd *cmds) {
   if (cmds == NULL) return false;
   struct mgos_pppos_data *pd;
@@ -1006,7 +964,6 @@ bool mgos_pppos_run_cmds(int if_instance, const struct mgos_pppos_cmd *cmds) {
   mgos_pppos_dispatch_once(pd);
   return true;
 }
-
 bool mgos_pppos_create(const struct mgos_config_pppos *cfg, int if_instance) {
   struct mgos_uart_config ucfg;
   mgos_uart_config_set_defaults(cfg->uart_no, &ucfg);
@@ -1093,7 +1050,6 @@ bool mgos_pppos_create(const struct mgos_config_pppos *cfg, int if_instance) {
   pd->try_cops = true;
   return true;
 }
-
 bool mgos_pppos_init(void) {
   mgos_event_register_base(MGOS_PPPOS_BASE, "pppos");
   if (!mgos_sys_config_get_pppos_enable()) return true;
