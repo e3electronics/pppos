@@ -21,10 +21,6 @@
 #include "lwip/ip_addr.h"
 #include "lwip/netif.h"
 #include "lwip/tcpip.h"
-#include "netif/ppp/ppp.h"
-#include "netif/ppp/pppapi.h"
-#include "netif/ppp/pppos.h"
-#include "mongoose.h"
 #include "mgos_gpio.h"
 #include "mgos_net_hal.h"
 #include "mgos_sys_config.h"
@@ -33,6 +29,10 @@
 #include "mgos_timers.h"
 #include "mgos_uart.h"
 #include "mgos_utils.h"
+#include "mongoose.h"
+#include "netif/ppp/ppp.h"
+#include "netif/ppp/pppapi.h"
+#include "netif/ppp/pppos.h"
 #define AT_CMD_TIMEOUT 2.0
 #define COPS_TIMEOUT 200
 #define COPS_AUTO_TIMEOUT 600
@@ -642,8 +642,7 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
       add_cmd(pd, mgos_pppos_at_cb, 2.0, "AT");
       add_cmd(pd, NULL, 0, "ATH");
       add_cmd(pd, NULL, 0, "ATE0");
-      //Artemio: add mgos_pppos_cfun_cb
-      add_cmd(pd, mgos_pppos_cfun_cb, 20.0, "AT+CFUN=0"); /* Offline */
+      add_cmd(pd, mgos_pppos_cfun_cb, 20.0, "AT+CFUN=0"); /* Offline  Artemio: add mgos_pppos_cfun_cb*/ 
       if (!pd->baud_ok) {
         struct mgos_uart_config ucfg;
         bool need_ifr = true, need_ifc = true;
@@ -660,30 +659,29 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
           add_cmd(pd, mgos_pppos_ifc_cb, 0, "AT+IFC=%d,%d", ifc, ifc);
         }
       }
-      //Artemio: add mgos_pppos_cfun_cb
+      // Artemio: add mgos_pppos_cfun_cb
       add_cmd(pd, mgos_pppos_cfun_cb, 20.0, "AT+CFUN=1"); /* Full functionality */
       add_cmd(pd, mgos_pppos_ati_cb, 0, "ATI");
       add_cmd(pd, mgos_pppos_gsn_cb, 0, "AT+GSN");
       add_cmd(pd, mgos_pppos_cimi_cb, 0, "AT+CIMI");
       add_cmd(pd, mgos_pppos_ccid_cb, 0, "AT+CCID");
       add_cmd(pd, mgos_pppos_cpin_cb, 0, "AT+CPIN?");
-      add_cmd(pd, NULL, 0, "AT+%s=0",
-              reg_cmd); /* Disable unsolicited reports */
+      add_cmd(pd, NULL, 0, "AT+%s=0",reg_cmd); /* Disable unsolicited reports */
       bool ok = false;
       if (pd->cfg->last_oper != NULL && pd->try_cops) {
         /* Try last used first, fall back to auto if unsuccessful. */
         LOG(LL_INFO, ("Trying to connect to %s", pd->cfg->last_oper));
         const char *comma = strchr(pd->cfg->last_oper, ',');
-        if (comma != NULL) { 
-         LOG(LL_INFO, ("Run cmd AT+COPS=4,2,\"%.*s\"", (int) (comma - pd->cfg->last_oper),
-                  pd->cfg->last_oper)); //Artemio add 
+        if (comma != NULL) {
+          LOG(LL_INFO, ("Run cmd AT+COPS=4,2,\"%.*s\"",
+                        (int) (comma - pd->cfg->last_oper),
+                        pd->cfg->last_oper));  // Artemio add
           // add_cmd(pd, mgos_pppos_cops_set_cb, COPS_TIMEOUT,
           //         "AT+COPS=4,2,\"%.*s\"", (int) (comma - pd->cfg->last_oper),
           //         pd->cfg->last_oper);
           add_cmd(pd, mgos_pppos_cops_set_cb, COPS_TIMEOUT,
                   "AT+COPS=1,2,\"%.*s\"", (int) (comma - pd->cfg->last_oper),
                   pd->cfg->last_oper);
-          
           ok = true;
         }
       }
@@ -700,6 +698,7 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
       add_cmd(pd, mgos_pppos_csq_cb, 0, "AT+CSQ");
       add_cmd(pd, NULL, 0, "AT+CGDCONT=1,\"IP\",\"%s\"", pd->cfg->apn);
       add_cmd(pd, mgos_pppos_atd_cb, 0, "ATDT*99***1#");
+      LOG(LL_INFO, ("PASO"));
       mgos_pppos_set_state(pd, PPPOS_CMD);
       (void) apn;
       break;
