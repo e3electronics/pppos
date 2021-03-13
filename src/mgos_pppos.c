@@ -676,7 +676,7 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
         const char *comma = strchr(pd->cfg->last_oper, ',');
         if (comma != NULL) { 
          LOG(LL_INFO, ("Run cmd AT+COPS=4,2,\"%.*s\"", (int) (comma - pd->cfg->last_oper),
-                  pd->cfg->last_oper))); //Artemio add 
+                  pd->cfg->last_oper)); //Artemio add 
           add_cmd(pd, mgos_pppos_cops_set_cb, COPS_TIMEOUT,
                   "AT+COPS=4,2,\"%.*s\"", (int) (comma - pd->cfg->last_oper),
                   pd->cfg->last_oper);
