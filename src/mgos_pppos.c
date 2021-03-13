@@ -34,7 +34,7 @@
 #include "mgos_uart.h"
 #include "mgos_utils.h"
 #define AT_CMD_TIMEOUT 2.0
-#define COPS_TIMEOUT 60
+#define COPS_TIMEOUT 200
 #define COPS_AUTO_TIMEOUT 600
 enum mgos_pppos_state {
   PPPOS_IDLE = 0,
@@ -674,7 +674,7 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
         /* Try last used first, fall back to auto if unsuccessful. */
         LOG(LL_INFO, ("Trying to connect to %s", pd->cfg->last_oper));
         const char *comma = strchr(pd->cfg->last_oper, ',');
-        if (comma != NULL) {
+        if (comma != NULL) {  
           add_cmd(pd, mgos_pppos_cops_set_cb, COPS_TIMEOUT,
                   "AT+COPS=4,2,\"%.*s\"", (int) (comma - pd->cfg->last_oper),
                   pd->cfg->last_oper);
