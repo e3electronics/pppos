@@ -556,6 +556,8 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
     }
     case PPPOS_RESET: {
       const double now = mgos_uptime();
+ LOG(LL_INFO, ("Reset vales GPIO %d  State: %d ",(pd->cfg->rst_gpio,  pd->cfg->rst_act ));
+      
       mgos_gpio_setup_output(pd->cfg->rst_gpio, pd->cfg->rst_act);
       pd->deadline = now + (pd->cfg->rst_hold_ms / 1000.0);
       LOG(LL_INFO, ("Resetting modem..."));
