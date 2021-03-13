@@ -446,9 +446,10 @@ static bool mgos_pppos_atd_cb(void *cb_arg, bool ok, struct mg_str data) {
  * Artemio: para seguimiento y control de CFUN
  */
 static bool mgos_pppos_cfun_cb(void *cb_arg, bool ok, struct mg_str data) {
+  struct mgos_pppos_data *pd = (struct mgos_pppos_data *) cb_arg;
   struct mgos_pppos_cmd *cur_cmd = &pd->cmds[pd->cmd_idx];
   if (!ok) {
-    LOG(LL_INFO, ("%s Error: %s", cur_cmd->cmd, data.p));
+    LOG(LL_INFO, ("Fail command: %s Error: %s", cur_cmd->cmd, data.p));
   }
   return ok;
 }
@@ -641,6 +642,7 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
       add_cmd(pd, mgos_pppos_at_cb, 5.0, "AT");
       add_cmd(pd, NULL, 0, "ATH");
       add_cmd(pd, NULL, 0, "ATE0");
+      //Artemio: add mgos_pppos_cfun_cb
       add_cmd(pd, mgos_pppos_cfun_cb, 20.0, "AT+CFUN=0"); /* Offline */
       if (!pd->baud_ok) {
         struct mgos_uart_config ucfg;
@@ -658,6 +660,7 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
           add_cmd(pd, mgos_pppos_ifc_cb, 0, "AT+IFC=%d,%d", ifc, ifc);
         }
       }
+      //Artemio: add mgos_pppos_cfun_cb
       add_cmd(pd, mgos_pppos_cfun_cb, 20.0, "AT+CFUN=1"); /* Full functionality */
       add_cmd(pd, mgos_pppos_ati_cb, 0, "ATI");
       add_cmd(pd, mgos_pppos_gsn_cb, 0, "AT+GSN");
