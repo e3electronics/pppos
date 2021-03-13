@@ -639,7 +639,7 @@ static void mgos_pppos_dispatch_once(struct mgos_pppos_data *pd) {
       LOG(LL_INFO, ("Connecting (UART%d, APN '%s')...", pd->cfg->uart_no,
                     (apn ? apn : "")));
       mbuf_remove(&pd->data, pd->data.len);
-      add_cmd(pd, mgos_pppos_at_cb, 20.0, "AT");
+      add_cmd(pd, mgos_pppos_at_cb, 2.0, "AT");
       add_cmd(pd, NULL, 0, "ATH");
       add_cmd(pd, NULL, 0, "ATE0");
       //Artemio: add mgos_pppos_cfun_cb
